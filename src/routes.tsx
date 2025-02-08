@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Mgo from "./pages/Mgo";
 import FormationDetail from "./pages/FormationDetail";
 import TestSupabase from "./testSupabase";
+import RevueHebdo from "./pages/RevueHebdo";
 
 
 const AppRoutes: React.FC = () => {
@@ -17,6 +18,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/mgo" element={<Mgo />} />
       <Route path="/formations/:id" element={<FormationDetail />} />
       <Route path="/test-supabase" element={<TestSupabase />} />
+      <Route path="/revue-hebdo" element={<RevueHebdo />} /> {/* 🆕 Ajout de la route */}
+
 
 
 
