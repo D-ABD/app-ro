@@ -47,7 +47,7 @@ const RevueHebdo: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
 
-
+    
  
   const fetchFormations = useCallback(async () => {
     setLoading(true);

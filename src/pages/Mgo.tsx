@@ -19,7 +19,7 @@ interface Formation {
   commentaires?: string | null;
   entresFormation?: number | null;
   numKairos?: string | null;
-  convocationOk?: boolean | null;
+  convocation_envoie?: boolean | null;
   dateHeureConvocation?: string | null;
   assistante?: string | null;
 }
@@ -44,7 +44,7 @@ const Mgo: React.FC = () => {
     commentaires: "",
     entresFormation: null,
     numKairos: "",
-    convocationOk: false,
+    convocation_envoie: false,
     dateHeureConvocation: "",
     assistante: "",
   });
@@ -129,7 +129,7 @@ const Mgo: React.FC = () => {
       commentaires: "",
       entresFormation: null,
       numKairos: "",
-      convocationOk: false,
+      convocation_envoie: false,
       assistante: "",
     });
 
@@ -185,7 +185,7 @@ const Mgo: React.FC = () => {
         <input type="text" name="numKairos" placeholder="N° Kairos" value={formData.numKairos || ""} onChange={handleChange} />
         <label>
           Convocation OK ?
-          <input type="checkbox" name="convocationOk" checked={formData.convocationOk || false} onChange={handleChange} />
+          <input type="checkbox" name="convocation_envoie" checked={formData.convocation_envoie || false} onChange={handleChange} />
         </label>
         <input type="text" name="assistante" placeholder="Assistante" value={formData.assistante || ""} onChange={handleChange} />
         <button type="submit">{editingId ? "Modifier" : "Ajouter"} Formation</button>

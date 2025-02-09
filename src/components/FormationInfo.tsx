@@ -44,7 +44,7 @@ const FormationInfo: React.FC<{ formation: Formation }> = ({ formation }) => {
           </div>
           <div style={styles.infoItem}>
             {/* Affichage conditionnel du statut de convocation */}
-            <strong>📨 Convocation:</strong> {formation.convocationOk ? "✅ Oui" : "❌ Non"}
+            <strong>📨 Convocation:</strong> {formation.convocation_envoie ? "✅ Oui" : "❌ Non"}
           </div>
         </div>
       </div>

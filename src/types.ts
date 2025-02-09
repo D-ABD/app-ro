@@ -25,7 +25,7 @@ export interface CommentaireDB {
     aRecruter: number;
     entresFormation: number;
     numKairos: string;
-    convocationOk: boolean;
+    convocation_envoie: boolean;
     dateHeureConvocation: string;
     assistante: string;
   }
