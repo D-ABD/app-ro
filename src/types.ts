@@ -6,6 +6,9 @@ export interface CommentaireDB {
   }
   
   export interface Formation {
+    commentaires: CommentaireDB[];
+    totalPlaces: number;
+    cap: number;
     id: number;
     nom: string;
     produit: string;
