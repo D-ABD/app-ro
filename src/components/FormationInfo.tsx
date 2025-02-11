@@ -1,171 +1,88 @@
 import React from "react";
 import { Formation } from "../types";
+import { EditableField } from "./EditableField";
 
-// Composant React pour afficher les informations détaillées d'une formation
-// Reçoit un objet 'formation' en propriété et l'affiche de manière structurée
-const FormationInfo: React.FC<{ formation: Formation }> = ({ formation }) => {
+interface FormationInfoProps {
+  formation: Formation;
+  onUpdate: <K extends keyof Formation>(field: K, value: Formation[K]) => Promise<void>;
+}
+
+const FormationInfo: React.FC<FormationInfoProps> = ({ formation, onUpdate }) => {
+  const handleUpdate = async <K extends keyof Formation>(field: K, value: string | number | boolean | null) => {
+    try {
+      let convertedValue: Formation[K];
+
+      switch (field) {
+        case 'convocation_envoie':
+          convertedValue = (value ? true : false) as Formation[K];
+          break;
+        case 'prevusCrif':
+        case 'prevusMp':
+        case 'inscritsCrif':
+        case 'inscritsMp':
+        case 'aRecruter':
+        case 'entresFormation':
+        case 'cap':
+          convertedValue = (value === null ? 0 : Number(value)) as Formation[K];
+          break;
+        default:
+          convertedValue = (value ?? "") as Formation[K];
+      }
+
+      await onUpdate(field, convertedValue);
+    } catch (error) {
+      console.error(`Erreur lors de la mise à jour du champ ${field}:`, error);
+    }
+  };
+
   return (
-    <div style={styles.infoContainer}>
-      {/* Section principale avec les informations générales de la formation */}
-      <div style={styles.section}>
-        {/* Première ligne d'informations : Produit, Centre, Type d'Offre */}
-        <div style={styles.infoRow}>
-          <div style={styles.infoItem}>
-            <strong>📌 Produit:</strong> {formation.produit}
-          </div>
-          <div style={styles.infoItem}>
-            <strong>🏢 Centre:</strong> {formation.centre}
-          </div>
-          <div style={styles.infoItem}>
-            <strong>🗂️ Type d'Offre:</strong> {formation.typeOffre}
-          </div>
+    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+      <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <EditableField value={formation.produit ?? ""} onUpdate={(value) => handleUpdate('produit', value)} type="text" label="📌 Produit" />
+          <EditableField value={formation.centre ?? ""} onUpdate={(value) => handleUpdate('centre', value)} type="text" label="🏢 Centre" />
+          <EditableField value={formation.typeOffre ?? ""} onUpdate={(value) => handleUpdate('typeOffre', value)} type="text" label="🗂️ Type d'Offre" />
         </div>
 
-        {/* Deuxième ligne d'informations : Numéros de produit, offre et KAIROS */}
-        <div style={styles.infoRow}>
-          <div style={styles.infoItem}>
-            <strong>🔢 N° Produit:</strong> {formation.numProduit}
-          </div>
-          <div style={styles.infoItem}>
-            <strong>📋 N° Offre:</strong> {formation.numOffre}
-          </div>
-          <div style={styles.infoItem}>
-            <strong>🔢 Numéro KAIROS:</strong> {formation.numKairos}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <EditableField value={formation.numProduit ?? ""} onUpdate={(value) => handleUpdate('numProduit', value)} type="text" label="🔢 N° Produit" />
+          <EditableField value={formation.numOffre ?? ""} onUpdate={(value) => handleUpdate('numOffre', value)} type="text" label="📋 N° Offre" />
+          <EditableField value={formation.numKairos ?? ""} onUpdate={(value) => handleUpdate('numKairos', value)} type="text" label="🔢 Numéro KAIROS" />
         </div>
 
-        {/* Troisième ligne d'informations : Dates et statut de convocation */}
-        <div style={styles.infoRow}>
-          <div style={styles.infoItem}>
-            <strong>📅 Début:</strong> {formation.dateDebut}
-          </div>
-          <div style={styles.infoItem}>
-            <strong>📅 Fin:</strong> {formation.dateFin}
-          </div>
-          <div style={styles.infoItem}>
-            {/* Affichage conditionnel du statut de convocation */}
-            <strong>📨 Convocation:</strong> {formation.convocation_envoie ? "✅ Oui" : "❌ Non"}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <EditableField value={formation.dateDebut ?? ""} onUpdate={(value) => handleUpdate('dateDebut', value)} type="date" label="📅 Début" />
+          <EditableField value={formation.dateFin ?? ""} onUpdate={(value) => handleUpdate('dateFin', value)} type="date" label="📅 Fin" />
+          <div className="bg-gray-50 rounded p-2">
+            <label className="flex items-center gap-2">
+              <span>📨 Convocation</span>
+              <input
+                type="checkbox"
+                checked={!!formation.convocation_envoie}
+                onChange={(e) => handleUpdate('convocation_envoie', e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+              <span>{formation.convocation_envoie ? "✅ Oui" : "❌ Non"}</span>
+            </label>
           </div>
         </div>
       </div>
 
-      {/* Section des statistiques de la formation */}
-      <div style={styles.statsSection}>
-        {/* Grille de statistiques flexible */}
-        <div style={styles.statsGrid}>
-          {/* Chaque élément de statistique est affiché avec un libellé et une valeur */}
-          <div style={styles.statsItem}>
-            <div style={styles.statsLabel}>Prévus CRIF</div>
-            <div style={styles.statsValue}>{formation.prevusCrif}</div>
-          </div>
-          <div style={styles.statsItem}>
-            <div style={styles.statsLabel}>Prévus MP</div>
-            <div style={styles.statsValue}>{formation.prevusMp}</div>
-          </div>
-          <div style={styles.statsItem}>
-            <div style={styles.statsLabel}>Inscrits CRIF</div>
-            <div style={styles.statsValue}>{formation.inscritsCrif}</div>
-          </div>
-          <div style={styles.statsItem}>
-            <div style={styles.statsLabel}>Inscrits MP</div>
-            <div style={styles.statsValue}>{formation.inscritsMp}</div>
-          </div>
-          <div style={styles.statsItem}>
-            <div style={styles.statsLabel}>À recruter</div>
-            <div style={styles.statsValue}>{formation.aRecruter}</div>
-          </div>
-          <div style={styles.statsItem}>
-            <div style={styles.statsLabel}>Entrés</div>
-            <div style={styles.statsValue}>{formation.entresFormation}</div>
-          </div>
+      <div className="bg-white rounded-lg p-4 shadow-sm">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <EditableField value={formation.prevusCrif ?? 0} onUpdate={(value) => handleUpdate('prevusCrif', value)} type="number" label="Prévus CRIF" />
+          <EditableField value={formation.prevusMp ?? 0} onUpdate={(value) => handleUpdate('prevusMp', value)} type="number" label="Prévus MP" />
+          <EditableField value={formation.inscritsCrif ?? 0} onUpdate={(value) => handleUpdate('inscritsCrif', value)} type="number" label="Inscrits CRIF" />
+          <EditableField value={formation.inscritsMp ?? 0} onUpdate={(value) => handleUpdate('inscritsMp', value)} type="number" label="Inscrits MP" />
+          <EditableField value={formation.aRecruter ?? 0} onUpdate={(value) => handleUpdate('aRecruter', value)} type="number" label="À recruter" />
+          <EditableField value={formation.entresFormation ?? 0} onUpdate={(value) => handleUpdate('entresFormation', value)} type="number" label="Entrés" />
         </div>
-
-        {/* Information sur l'assistante responsable */}
-        <div style={styles.assistantInfo}>
-          <strong>👩‍💼 Assistante:</strong> {formation.assistante}
+        <div className="mt-4 pt-4 border-t text-right">
+          <EditableField value={formation.assistante ?? ""} onUpdate={(value) => handleUpdate('assistante', value)} type="text" label="👩‍💼 Assistante" />
         </div>
       </div>
     </div>
   );
-};
-
-// Définition des styles CSS-in-JS pour le composant
-// Utilise un objet TypeScript pour garantir la typage des propriétés CSS
-const styles: { [key: string]: React.CSSProperties } = {
-  // Style du conteneur principal : fond légèrement gris, coins arrondis
-  infoContainer: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: "8px",
-    padding: "15px",
-    marginBottom: "20px",
-  },
-  // Style de la section d'informations générales
-  section: {
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "15px",
-    marginBottom: "15px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)", // Ombre légère
-  },
-  // Disposition flexible des lignes d'informations
-  infoRow: {
-    display: "flex",
-    flexWrap: "wrap", // Permet le passage à la ligne sur petit écran
-    gap: "20px",
-    marginBottom: "10px",
-    alignItems: "center",
-  },
-  // Style de chaque élément d'information
-  infoItem: {
-    flex: "1 1 250px", // Flexibilité et largeur minimale
-    minWidth: "200px",
-    fontSize: "0.9rem",
-    padding: "8px",
-    backgroundColor: "#f8f9fa",
-    borderRadius: "4px",
-  },
-  // Style de la section de statistiques
-  statsSection: {
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "15px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-  },
-  // Grille responsive pour les statistiques
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", // Colonnes adaptatives
-    gap: "15px",
-    marginBottom: "15px",
-  },
-  // Style de chaque élément de statistique
-  statsItem: {
-    textAlign: "center",
-    padding: "10px",
-    backgroundColor: "#f8f9fa",
-    borderRadius: "4px",
-  },
-  // Style du libellé de statistique
-  statsLabel: {
-    fontSize: "0.8rem",
-    color: "#6c757d",
-    marginBottom: "5px",
-  },
-  // Style de la valeur de statistique
-  statsValue: {
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-    color: "#2c3e50",
-  },
-  // Style de l'information de l'assistante
-  assistantInfo: {
-    textAlign: "right",
-    fontSize: "0.9rem",
-    color: "#495057",
-    borderTop: "1px solid #dee2e6",
-    paddingTop: "10px",
-    marginTop: "10px",
-  },
 };
 
 export default FormationInfo;

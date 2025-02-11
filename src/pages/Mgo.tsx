@@ -1,211 +1,286 @@
-import React, { useEffect, useState } from "react";
+// --- IMPORTS ---
+// Import de React et du hook useState pour la gestion d'état
+import React, { useState } from "react";
+// Import du client Supabase pour la connexion à la base de données
 import { supabase } from "../supabaseClient";
+// Import du type Formation qui définit la structure des données
+import { Formation } from "../types";
 
-interface Formation {
-  id: number;
-  nom: string;
-  centre: string;
-  produit?: string | null;
-  numProduit?: string | null;
-  numOffre?: string | null;
-  typeOffre?: string | null;
-  dateDebut?: string | null;
-  dateFin?: string | null;
-  prevusCrif?: number | null;
-  prevusMp?: number | null;
-  inscritsCrif?: number | null;
-  inscritsMp?: number | null;
-  aRecruter?: number | null;
-  commentaires?: string | null;
-  entresFormation?: number | null;
-  numKairos?: string | null;
-  convocation_envoie?: boolean | null;
-  dateHeureConvocation?: string | null;
-  assistante?: string | null;
-}
-
+// --- DÉFINITION DU COMPOSANT ---
+// Composant React pour la gestion des formations (Mgo)
 const Mgo: React.FC = () => {
-  const [formations, setFormations] = useState<Formation[]>([]);
-  const [loading, setLoading] = useState(true);
+  // --- ÉTATS (STATES) ---
+  // État de chargement pour les opérations asynchrones
+  const [loading, setLoading] = useState(false);
+  // État pour gérer les messages d'erreur
+  const [error, setError] = useState<string | null>(null);
+  // État pour gérer les messages de succès
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // État principal du formulaire
+  // Utilisation de Omit<Formation, "id"> pour exclure l'id qui sera généré automatiquement
   const [formData, setFormData] = useState<Omit<Formation, "id">>({
-    nom: "",
-    centre: "",
-    produit: "",
-    numProduit: "",
-    numOffre: "",
-    typeOffre: "",
-    dateDebut: "",
-    dateFin: "",
-    prevusCrif: null,
-    prevusMp: null,
-    inscritsCrif: null,
-    inscritsMp: null,
-    aRecruter: null,
-    commentaires: "",
-    entresFormation: null,
-    numKairos: "",
-    convocation_envoie: false,
-    dateHeureConvocation: "",
-    assistante: "",
+    // Champs obligatoires
+    nom: "",            // Nom de la formation
+    centre: "",         // Centre de formation
+    // Champs optionnels
+    produit: null,      // Nom du produit
+    numProduit: null,   // Numéro du produit
+    numOffre: null,     // Numéro de l'offre
+    typeOffre: null,    // Type d'offre
+    dateDebut: null,    // Date de début
+    dateFin: null,      // Date de fin
+    prevusCrif: null,   // Nombre prévu CRIF
+    prevusMp: null,     // Nombre prévu MP
+    inscritsCrif: null, // Inscrits CRIF
+    inscritsMp: null,   // Inscrits MP
+    aRecruter: null,    // Nombre à recruter
+    entresFormation: null, // Entrées en formation
+    numKairos: null,    // Numéro Kairos
+    convocation_envoie: false, // État des convocations
+    assistante: null,   // Nom de l'assistante
+    totalPlaces: null,  // Total des places
+    cap: null,         // Capacité
   });
 
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetchFormations();
-  }, []);
-
-  const fetchFormations = async () => {
-    const { data, error } = await supabase.from("formations").select("*");
-    if (error) console.error("Erreur de récupération :", error);
-    else setFormations(data);
-    setLoading(false);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // --- GESTIONNAIRES D'ÉVÉNEMENTS ---
+  // Gestion des modifications des champs du formulaire
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value || null,
+      [name]: 
+        type === "number" ? (value ? Number(value) : null) :  // Conversion en nombre pour les champs numériques
+        type === "checkbox" ? e.target.checked :              // Gestion des cases à cocher
+        value || null,                                       // Valeur normale ou null si vide
     }));
   };
 
+  // Gestion de la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault();                    // Empêche le rechargement de la page
+    setLoading(true);                     // Active l'indicateur de chargement
+    setError(null);                       // Réinitialise les erreurs
+    setSuccess(null);                     // Réinitialise les succès
 
-    // Vérification des champs obligatoires
+    // Validation des champs obligatoires
     if (!formData.nom || !formData.centre) {
-      alert("Veuillez remplir les champs obligatoires (Nom, Centre).");
+      setError("Veuillez remplir les champs obligatoires.");
+      setLoading(false);
       return;
     }
 
-    const confirmationMessage = editingId
-      ? "Voulez-vous vraiment modifier cette formation ?"
-      : "Voulez-vous vraiment ajouter cette formation ?";
-    
-    if (!window.confirm(confirmationMessage)) return;
+    // Insertion des données dans Supabase
+    const { data, error } = await supabase.from("formations").insert([formData]).select();
 
-    // Remplacement des champs vides par `NULL`
-    const cleanedFormData = Object.fromEntries(
-      Object.entries(formData).map(([key, value]) => [key, value === "" ? null : value])
-    );
-
-    console.log("📤 Données envoyées :", cleanedFormData);
-
-    if (editingId) {
-      const { error } = await supabase.from("formations").update(cleanedFormData).eq("id", editingId);
-      if (error) {
-        console.error("❌ Erreur de mise à jour :", error);
-        alert("Une erreur s'est produite lors de la modification.");
-      } else {
-        alert("Formation modifiée avec succès !");
-      }
-      setEditingId(null);
-    } else {
-      const { error } = await supabase.from("formations").insert([cleanedFormData]);
-      if (error) {
-        console.error("❌ Erreur d'insertion :", error);
-        alert("Une erreur s'est produite lors de l'ajout.");
-      } else {
-        alert("Formation ajoutée avec succès !");
-      }
-    }
-
-    // Réinitialisation du formulaire
-    setFormData({
-      nom: "",
-      centre: "",
-      produit: "",
-      numProduit: "",
-      numOffre: "",
-      typeOffre: "",
-      dateDebut: "",
-      dateFin: "",
-      prevusCrif: null,
-      prevusMp: null,
-      inscritsCrif: null,
-      inscritsMp: null,
-      aRecruter: null,
-      commentaires: "",
-      entresFormation: null,
-      numKairos: "",
-      convocation_envoie: false,
-      assistante: "",
-    });
-
-    fetchFormations();
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette formation ?")) return;
-
-    const { error } = await supabase.from("formations").delete().eq("id", id);
+    // Gestion des erreurs et du succès
     if (error) {
-      console.error("❌ Erreur de suppression :", error);
-      alert("Une erreur s'est produite lors de la suppression.");
+      console.error("Erreur Supabase :", error);
+      setError(`Erreur lors de la création : ${error.message}`);
     } else {
-      alert("Formation supprimée avec succès !");
-      fetchFormations();
+      console.log("Formation créée avec succès :", data);
+      setSuccess("Formation ajoutée avec succès !");
+      // Réinitialisation du formulaire
+      setFormData({
+        nom: "",
+        centre: "",
+        produit: null,
+        numProduit: null,
+        numOffre: null,
+        typeOffre: null,
+        dateDebut: null,
+        dateFin: null,
+        prevusCrif: null,
+        prevusMp: null,
+        inscritsCrif: null,
+        inscritsMp: null,
+        aRecruter: null,
+        entresFormation: null,
+        numKairos: null,
+        convocation_envoie: false,
+        assistante: null,
+        totalPlaces: null,
+        cap: null,
+      });
     }
+
+    setLoading(false);  // Désactive l'indicateur de chargement
   };
 
-  const handleEdit = (formation: Formation) => {
-    setFormData({ ...formation });
-    setEditingId(formation.id);
-  };
-
+  // --- RENDU DU COMPOSANT ---
   return (
-    <div style={{ textAlign: "center", padding: "20px" }}>
-      <h1>Gestion des Formations</h1>
+    <div style={styles.container}>
+      <h1>Créer une formation</h1>
+      {/* Affichage des messages d'erreur et de succès */}
+      {error && <p style={styles.error}>{error}</p>}
+      {success && <p style={styles.success}>{success}</p>}
+      
+      {/* Formulaire de création de formation */}
+      <form onSubmit={handleSubmit} style={styles.form}>
+        {/* Champs obligatoires */}
+        <input 
+          type="text" 
+          name="nom" 
+          placeholder="Nom de la formation *" 
+          value={formData.nom} 
+          onChange={handleChange} 
+          required 
+        />
+        <input 
+          type="text" 
+          name="centre" 
+          placeholder="Centre *" 
+          value={formData.centre} 
+          onChange={handleChange} 
+          required 
+        />
+        
+        {/* Champs optionnels */}
+        <input 
+          type="text" 
+          name="produit" 
+          placeholder="Produit (optionnel)" 
+          value={formData.produit || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="text" 
+          name="numProduit" 
+          placeholder="Numéro Produit (optionnel)" 
+          value={formData.numProduit || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="text" 
+          name="numOffre" 
+          placeholder="Numéro Offre (optionnel)" 
+          value={formData.numOffre || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="text" 
+          name="typeOffre" 
+          placeholder="Type Offre (optionnel)" 
+          value={formData.typeOffre || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="date" 
+          name="dateDebut" 
+          value={formData.dateDebut || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="date" 
+          name="dateFin" 
+          value={formData.dateFin || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="number" 
+          name="prevusCrif" 
+          placeholder="Prévus CRIF (optionnel)" 
+          value={formData.prevusCrif || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="number" 
+          name="prevusMp" 
+          placeholder="Prévus MP (optionnel)" 
+          value={formData.prevusMp || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="number" 
+          name="inscritsCrif" 
+          placeholder="Inscrits CRIF (optionnel)" 
+          value={formData.inscritsCrif || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="number" 
+          name="inscritsMp" 
+          placeholder="Inscrits MP (optionnel)" 
+          value={formData.inscritsMp || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="number" 
+          name="aRecruter" 
+          placeholder="À recruter (optionnel)" 
+          value={formData.aRecruter || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="number" 
+          name="entresFormation" 
+          placeholder="Entrées Formation (optionnel)" 
+          value={formData.entresFormation || ""} 
+          onChange={handleChange} 
+        />
+        <input 
+          type="text" 
+          name="numKairos" 
+          placeholder="Num Kairos (optionnel)" 
+          value={formData.numKairos || ""} 
+          onChange={handleChange} 
+        />
+        
+        {/* Sélecteur pour l'état des convocations */}
+        <select 
+          name="convocation_envoie" 
+          value={formData.convocation_envoie ? "true" : "false"} 
+          onChange={handleChange}
+        >
+          <option value="false">Convocation non envoyée</option>
+          <option value="true">Convocation envoyée</option>
+        </select>
+        
+        <input 
+          type="text" 
+          name="assistante" 
+          placeholder="Assistante (optionnel)" 
+          value={formData.assistante || ""} 
+          onChange={handleChange} 
+        />
 
-      {/* Formulaire */}
-      <form onSubmit={handleSubmit} style={{ maxWidth: "600px", margin: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
-        <input type="text" name="nom" placeholder="Nom" value={formData.nom} onChange={handleChange} required />
-        <input type="text" name="centre" placeholder="Centre" value={formData.centre} onChange={handleChange} required />
-        <input type="text" name="produit" placeholder="Produit" value={formData.produit || ""} onChange={handleChange} />
-        <input type="text" name="numProduit" placeholder="N° Produit" value={formData.numProduit || ""} onChange={handleChange} />
-        <input type="text" name="numOffre" placeholder="N° Offre" value={formData.numOffre || ""} onChange={handleChange} />
-        <input type="text" name="typeOffre" placeholder="Type Offre" value={formData.typeOffre || ""} onChange={handleChange} />
-        <label>
-        Date de Début :
-        <input type="date" name="dateDebut" value={formData.dateDebut || ""} onChange={handleChange} />
-        </label>
-
-        <label>
-        Date de Fin :
-        <input type="date" name="dateFin" value={formData.dateFin || ""} onChange={handleChange} />
-        </label>
-        <input type="number" name="prevusCrif" placeholder="Prévus CRIF" value={formData.prevusCrif || ""} onChange={handleChange} />
-        <input type="number" name="prevusMp" placeholder="Prévus MP" value={formData.prevusMp || ""} onChange={handleChange} />
-        <input type="number" name="inscritsCrif" placeholder="Inscrits CRIF" value={formData.inscritsCrif || ""} onChange={handleChange} />
-        <input type="number" name="inscritsMp" placeholder="Inscrits MP" value={formData.inscritsMp || ""} onChange={handleChange} />
-        <input type="number" name="aRecruter" placeholder="A Recruter" value={formData.aRecruter || ""} onChange={handleChange} />
-        <textarea name="commentaires" placeholder="Commentaires" value={formData.commentaires || ""} onChange={handleChange} rows={3} />
-        <input type="number" name="entresFormation" placeholder="Entrés en Formation" value={formData.entresFormation || ""} onChange={handleChange} />
-        <input type="text" name="numKairos" placeholder="N° Kairos" value={formData.numKairos || ""} onChange={handleChange} />
-        <label>
-          Convocation OK ?
-          <input type="checkbox" name="convocation_envoie" checked={formData.convocation_envoie || false} onChange={handleChange} />
-        </label>
-        <input type="text" name="assistante" placeholder="Assistante" value={formData.assistante || ""} onChange={handleChange} />
-        <button type="submit">{editingId ? "Modifier" : "Ajouter"} Formation</button>
+        {/* Bouton de soumission */}
+        <button type="submit" disabled={loading} style={styles.button}>
+          {loading ? "Création..." : "Créer la formation"}
+        </button>
       </form>
-
-      {/* Liste des formations */}
-      <h2>Liste des Formations</h2>
-      {loading ? <p>Chargement...</p> : (
-        <ul>
-          {formations.map((formation) => (
-            <li key={formation.id} style={{ padding: "10px", borderBottom: "1px solid #ddd" }}>
-              {formation.nom} - {formation.produit || "N/A"} ({formation.centre})
-              <button onClick={() => handleEdit(formation)}>✏️ Modifier</button>
-              <button onClick={() => handleDelete(formation.id)}>🗑 Supprimer</button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 };
 
+// --- STYLES ---
+// Définition des styles avec typage CSS React
+const styles: { [key: string]: React.CSSProperties } = {
+  container: { 
+    padding: "20px", 
+    maxWidth: "500px", 
+    margin: "auto" 
+  },
+  form: { 
+    display: "flex", 
+    flexDirection: "column", 
+    gap: "10px" 
+  },
+  button: { 
+    padding: "10px", 
+    backgroundColor: "#007bff", 
+    color: "white", 
+    border: "none", 
+    cursor: "pointer" 
+  },
+  error: { 
+    color: "red" 
+  },
+  success: { 
+    color: "green" 
+  }
+};
+
+// Export du composant
 export default Mgo;

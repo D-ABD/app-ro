@@ -1,78 +1,117 @@
 import React, { useState } from "react";
-
-interface Commentaire {
-  id: number;
-  formation_id: number;
-  text: string;
-  created_at: string;
-}
+import { useCommentaires } from "../hooks/useCommentaires";
 
 interface CommentaireRevueProps {
   formationId: number;
-  commentaires?: Commentaire[];  // Optionnel pour éviter les erreurs
-  onAddComment: (formationId: number, text: string) => void;
 }
 
-const CommentaireRevue: React.FC<CommentaireRevueProps> = ({ formationId, commentaires = [], onAddComment }) => {
+const CommentaireRevue: React.FC<CommentaireRevueProps> = ({ formationId }) => {
   const [newComment, setNewComment] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  
+  const {
+    commentaires,
+    isLoading,
+    error,
+    addCommentaire
+  } = useCommentaires(formationId);
 
-  const validCommentaires = Array.isArray(commentaires) ? commentaires : [];
-  const lastComment = validCommentaires.length > 0 ? validCommentaires[validCommentaires.length - 1] : null;
+  const validCommentaires = commentaires || [];
+  const lastComment = validCommentaires[0]; // Les commentaires sont déjà triés par date
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR");
+    return date.toLocaleDateString("fr-FR", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    try {
+      await addCommentaire(formationId, newComment.trim());
+      setNewComment(""); // Réinitialiser le champ après l'ajout
+    } catch (err) {
+      console.error("Erreur lors de l'ajout du commentaire:", err);
+    }
   };
 
   return (
-    <div style={styles.container}>
-      <p><strong>Dernier commentaire :</strong> {lastComment ? lastComment.text : "Aucun commentaire"}</p>
-      {lastComment && <p style={styles.date}>Ajouté le : {formatDate(lastComment.created_at)}</p>}
-      
-      <input
-        type="text"
-        placeholder="Ajouter un commentaire..."
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        style={styles.input}
-      />
-      <button onClick={() => { 
-        if (newComment.trim()) {
-          onAddComment(formationId, newComment.trim()); 
-          setNewComment(""); 
-        }
-      }} style={styles.button}>
-        Ajouter
-      </button>
-
-      <button onClick={() => setShowHistory(!showHistory)} style={styles.historyButton}>
-        {showHistory ? "Masquer l'historique" : "Voir l'historique"}
-      </button>
-
-      {showHistory && (
-        <div style={styles.history}>
-          <h4>Historique des commentaires :</h4>
-          {validCommentaires.length > 1 ? (
-            validCommentaires.slice(0, -1).map((comment) => (
-              <p key={comment.id}>{formatDate(comment.created_at)} - {comment.text}</p>
-            ))
-          ) : (
-            <p>Aucun autre commentaire</p>
-          )}
+    <div className="bg-white rounded-lg shadow p-4 mt-4">
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+          {error}
         </div>
       )}
+
+      {/* Dernier commentaire */}
+      <div className="mb-4">
+        <h3 className="font-semibold text-lg mb-2">Dernier commentaire</h3>
+        {isLoading ? (
+          <p className="text-gray-500">Chargement...</p>
+        ) : lastComment ? (
+          <div className="bg-gray-50 p-3 rounded">
+            <p>{lastComment.text}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {formatDate(lastComment.created_at)}
+            </p>
+          </div>
+        ) : (
+          <p className="text-gray-500">Aucun commentaire</p>
+        )}
+      </div>
+
+      {/* Formulaire d'ajout */}
+      <form onSubmit={handleSubmit} className="mb-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Ajouter un commentaire..."
+            className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !newComment.trim()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            {isLoading ? "..." : "Ajouter"}
+          </button>
+        </div>
+      </form>
+
+      {/* Historique des commentaires */}
+      <div>
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="text-blue-500 hover:text-blue-600 text-sm"
+        >
+          {showHistory ? "Masquer l'historique" : "Voir l'historique"}
+        </button>
+
+        {showHistory && validCommentaires.length > 1 && (
+          <div className="mt-4 space-y-3">
+            {validCommentaires.slice(1).map((comment) => (
+              <div key={comment.id} className="border-t pt-3">
+                <p>{comment.text}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {formatDate(comment.created_at)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-};
-
-const styles = {
-  container: { padding: "10px", border: "1px solid #ccc", borderRadius: "5px", marginTop: "10px" },
-  input: { padding: "5px", width: "80%", marginBottom: "5px" },
-  button: { padding: "5px", marginLeft: "5px", cursor: "pointer" },
-  historyButton: { display: "block", marginTop: "5px", cursor: "pointer" },
-  history: { marginTop: "10px", padding: "5px", borderTop: "1px solid #ddd" },
-  date: { fontSize: "12px", color: "#555" },
 };
 
 export default CommentaireRevue;

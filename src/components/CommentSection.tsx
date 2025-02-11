@@ -1,136 +1,112 @@
+// Importation des dépendances React et des hooks nécessaires
 import React, { useState, useMemo } from "react";
+// Import du type qui définit la structure d'un commentaire
 import { CommentaireDB } from "../types";
 
-// Définition du composant CommentSection avec ses propriétés
-// Ce composant gère une section de commentaires avec possibilité d'ajouter de nouveaux commentaires
-const CommentSection: React.FC<{ 
-  // Liste des commentaires existants 
-  commentaires: CommentaireDB[],
-  // Fonction pour ajouter un nouveau commentaire
-  onAddComment: (text: string) => Promise<void>
-}> = ({ commentaires = [], onAddComment }) => {
-  // État pour gérer le nouveau commentaire en cours de saisie
-  const [newComment, setNewComment] = useState<string>("");
-  
-  // État pour afficher/masquer l'historique des commentaires
-  const [showHistory, setShowHistory] = useState<boolean>(false);
-  
-  // État pour gérer le processus de soumission du commentaire
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  
-  // État pour gérer et afficher les erreurs
-  const [error, setError] = useState<string>("");
+// Importation des icônes de la librairie react-icons
+import { FaPlus, FaHistory, FaTimes } from "react-icons/fa";
 
-  // Utilisation de useMemo pour optimiser le traitement des commentaires
-  // Sépare le dernier commentaire des commentaires historiques
+// Définition du composant avec ses props typées
+const CommentSection: React.FC<{ 
+  commentaires: CommentaireDB[],           // Liste des commentaires
+  onAddComment: (text: string) => Promise<void>  // Fonction pour ajouter un commentaire
+}> = ({ commentaires = [], onAddComment }) => {
+  // États locaux du composant
+  const [newComment, setNewComment] = useState<string>(""); // Texte du nouveau commentaire
+  const [showHistory, setShowHistory] = useState<boolean>(false); // Affichage de l'historique
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // État de soumission
+  const [error, setError] = useState<string>(""); // Message d'erreur
+
+  // Calcul mémorisé du dernier commentaire et de l'historique
   const { lastComment, historicComments } = useMemo(() => {
-    // Si aucun commentaire, retourne des valeurs par défaut
+    // Si pas de commentaires, retourne des valeurs par défaut
     if (!commentaires.length) return { lastComment: null, historicComments: [] };
     
-    // Trie les commentaires du plus récent au plus ancien
+    // Trie les commentaires par date (plus récent en premier)
     const sorted = [...commentaires].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
-    // Retourne le dernier commentaire et le reste comme historique
-    return {
-      lastComment: sorted[0],
-      historicComments: sorted.slice(1)
+    // Retourne le dernier commentaire et l'historique
+    return { 
+      lastComment: sorted[0],          // Premier commentaire (le plus récent)
+      historicComments: sorted.slice(1) // Tous les autres commentaires
     };
-  }, [commentaires]); // Recalcule uniquement si la liste de commentaires change
+  }, [commentaires]); // Recalcule uniquement si commentaires change
 
-  // Gestionnaire de soumission de nouveau commentaire
+  // Gestion de l'ajout d'un nouveau commentaire
   const handleSubmit = async () => {
-    // Supprime les espaces en début et fin du commentaire
     const trimmedComment = newComment.trim();
-    
-    // Vérifie que le commentaire n'est pas vide
+    // Validation : le commentaire ne peut pas être vide
     if (!trimmedComment) {
-      setError("Le commentaire ne peut pas être vide");
+      setError("Le commentaire ne peut pas être vide.");
       return;
     }
 
     try {
-      // Désactive le bouton de soumission pendant le traitement
-      setIsSubmitting(true);
-      // Efface les erreurs précédentes
-      setError("");
-      
-      // Appelle la fonction pour ajouter le commentaire
-      await onAddComment(trimmedComment);
-      
-      // Réinitialise le champ de saisie après soumission
-      setNewComment("");
+      setIsSubmitting(true); // Début de la soumission
+      setError(""); // Réinitialisation des erreurs
+      await onAddComment(trimmedComment); // Appel de la fonction d'ajout
+      setNewComment(""); // Réinitialisation du champ
     } catch (error) {
-      // Gère les erreurs potentielles lors de l'ajout du commentaire
       console.error("Erreur lors de l'ajout du commentaire:", error);
-      setError("Une erreur est survenue lors de l'ajout du commentaire");
+      setError("Une erreur est survenue lors de l'ajout du commentaire.");
     } finally {
-      // Réactive le bouton de soumission
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Fin de la soumission
     }
   };
 
-  // Fonction pour formater la date dans un format lisible en français
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit'
+  // Fonction utilitaire pour formater les dates
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
     });
-  };
 
+  // Rendu du composant
   return (
     <div style={styles.commentContainer}>
-      {/* En-tête de la section commentaires */}
+      {/* En-tête avec titre et bouton d'historique */}
       <div style={styles.header}>
         <h2 style={styles.title}>💬 Commentaires</h2>
-        
-        {/* Bouton pour afficher/masquer l'historique des commentaires */}
         {historicComments.length > 0 && (
-          <button 
-            onClick={() => setShowHistory(!showHistory)}
-            style={styles.historyButton}
-          >
-            {showHistory ? "Masquer l'historique" : "Voir l'historique des commentaires"}
+          <button onClick={() => setShowHistory(!showHistory)} style={styles.historyButton}>
+            {showHistory ? <FaTimes /> : <FaHistory />} 
+            {showHistory ? "Masquer l'historique" : "Voir l'historique"}
           </button>
         )}
       </div>
 
-      {/* Conteneur de saisie pour nouveau commentaire */}
+      {/* Zone de saisie du nouveau commentaire */}
       <div style={styles.inputContainer}>
         <input
           type="text"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Ajouter un commentaire"
+          placeholder="Ajouter un commentaire..."
           style={styles.input}
           disabled={isSubmitting}
-          // Permet de soumettre le commentaire en appuyant sur Entrée
-          onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+          onKeyPress={(e) => e.key === "Enter" && handleSubmit()}
         />
-        {/* Bouton d'ajout de commentaire */}
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          style={{
-            ...styles.addButton,
-            ...(isSubmitting && styles.buttonDisabled)
-          }}
+        <button 
+          onClick={handleSubmit} 
+          disabled={isSubmitting} 
+          style={{ ...styles.addButton, ...(isSubmitting && styles.buttonDisabled) }}
         >
-          {isSubmitting ? "..." : "➕"}
+          {isSubmitting ? "..." : <FaPlus />}
         </button>
       </div>
 
-      {/* Affichage des erreurs */}
+      {/* Affichage des erreurs éventuelles */}
       {error && <p style={styles.error}>{error}</p>}
 
-      {/* Section du dernier commentaire */}
+      {/* Affichage du dernier commentaire */}
       {lastComment && (
         <div style={styles.lastComment}>
-          <h3 style={styles.sectionTitle}>Dernier commentaire</h3>
+          <h3 style={styles.sectionTitle}>📝 Dernier commentaire</h3>
           <div style={styles.commentItem}>
             <p style={styles.commentText}>{lastComment.text}</p>
             <p style={styles.date}>{formatDate(lastComment.created_at)}</p>
@@ -138,12 +114,11 @@ const CommentSection: React.FC<{
         </div>
       )}
 
-      {/* Section historique des commentaires */}
+      {/* Affichage de l'historique des commentaires */}
       {showHistory && historicComments.length > 0 && (
         <div style={styles.history}>
-          <h3 style={styles.sectionTitle}>Historique</h3>
+          <h3 style={styles.sectionTitle}>📜 Historique</h3>
           <div style={styles.commentsList}>
-            {/* Affiche tous les commentaires historiques */}
             {historicComments.map((comment) => (
               <div key={comment.id} style={styles.commentItem}>
                 <p style={styles.commentText}>{comment.text}</p>
@@ -157,46 +132,47 @@ const CommentSection: React.FC<{
   );
 };
 
-// Définition des styles pour le composant
-// Utilise un objet pour stocker tous les styles CSS-in-JS
+// Définition des styles CSS-in-JS
 const styles: { [key: string]: React.CSSProperties } = {
-  // Styles pour le conteneur principal des commentaires
   commentContainer: {
     padding: "20px",
     backgroundColor: "#f8f9fa",
-    borderRadius: "8px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    borderRadius: "10px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+    maxWidth: "500px",
+    margin: "auto",
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "20px",
+    marginBottom: "15px",
   },
   title: {
     margin: 0,
-    fontSize: "1.5rem",
-    fontWeight: "600",
+    fontSize: "1.4rem",
+    fontWeight: "bold",
   },
   inputContainer: {
     display: "flex",
     gap: "10px",
-    marginBottom: "20px",
+    marginBottom: "15px",
   },
   input: {
     flex: 1,
     padding: "10px",
-    borderRadius: "4px",
-    border: "1px solid #dee2e6",
+    borderRadius: "5px",
+    border: "1px solid #ced4da",
     fontSize: "14px",
   },
   addButton: {
-    padding: "10px 20px",
-    backgroundColor: "#28a745",
+    padding: "10px",
+    backgroundColor: "#007bff",
     color: "white",
     border: "none",
-    borderRadius: "4px",
+    borderRadius: "5px",
     cursor: "pointer",
+    transition: "background 0.3s ease",
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -204,27 +180,29 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   error: {
     color: "#dc3545",
-    fontSize: "14px",
-    marginTop: "-10px",
-    marginBottom: "15px",
+    fontSize: "13px",
+    marginBottom: "10px",
   },
   historyButton: {
-    padding: "8px 16px",
+    padding: "8px 12px",
     backgroundColor: "#6c757d",
     color: "white",
     border: "none",
-    borderRadius: "4px",
+    borderRadius: "5px",
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
   },
   commentItem: {
     backgroundColor: "white",
-    padding: "15px",
-    borderRadius: "4px",
-    marginBottom: "10px",
+    padding: "12px",
+    borderRadius: "6px",
+    marginBottom: "8px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   },
   commentText: {
-    margin: "0 0 10px 0",
+    margin: "0 0 6px 0",
     fontSize: "14px",
   },
   date: {
@@ -232,18 +210,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#6c757d",
   },
   lastComment: {
-    marginBottom: "20px",
+    marginBottom: "15px",
   },
   history: {
-    marginTop: "20px",
+    marginTop: "15px",
   },
   sectionTitle: {
     fontSize: "1.1rem",
-    marginBottom: "15px",
+    marginBottom: "10px",
     color: "#495057",
   },
   commentsList: {
-    maxHeight: "400px",
+    maxHeight: "250px",
     overflowY: "auto",
   },
 };
